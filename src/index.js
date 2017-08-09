@@ -37,7 +37,7 @@ export {
   makeCreateContainerFunction,
   default as createContainer
 } from "./components/containers/create-container";
-export { default as BrushHelpers } from "./components/containers/brush-helpers";
+export { default as BrushHelpers, RawBrushHelpers } from "./components/containers/brush-helpers";
 export { default as CursorHelpers } from "./components/containers/cursor-helpers";
 export { default as SelectionHelpers } from "./components/containers/selection-helpers";
 export { default as VoronoiHelpers } from "./components/containers/voronoi-helpers";

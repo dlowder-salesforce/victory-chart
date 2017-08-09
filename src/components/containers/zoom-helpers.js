@@ -193,7 +193,7 @@ const Helpers = {
     }];
   },
 
-  onMouseMove(evt, targetProps, eventKey, ctx) { // eslint-disable-line max-params
+  onMouseMove(evt, targetProps, eventKey, ctx, keepStart) { // eslint-disable-line max-params
     if (targetProps.panning) {
       const { scale, startX, startY, onDomainChange, dimension, zoomDomain } = targetProps;
       const { x, y } = Selection.getSVGEventCoordinates(evt);
@@ -207,7 +207,9 @@ const Helpers = {
       };
       const resumeAnimation = this.handleAnimation(ctx);
       const mutatedProps = {
-        parentControlledProps: ["domain"], startX: x, startY: y,
+        parentControlledProps: ["domain"],
+        startX: (keepStart ? startX : x),
+        startY: (keepStart ? startY : y),
         domain: currentDomain, currentDomain, originalDomain, cachedZoomDomain: zoomDomain
       };
       if (isFunction(onDomainChange)) {
