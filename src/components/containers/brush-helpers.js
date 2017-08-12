@@ -112,6 +112,24 @@ const Helpers = {
 
   onMouseDown(evt, targetProps) { // eslint-disable-line max-statements
     evt.preventDefault();
+    const { isTVSelectable } = targetProps;
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    if (isTVSelectable) {
+      var mutations = this._onMouseDown(evt, targetProps);
+      mutations.push({
+        target: "parent",
+        mutation: () => {
+          return { startX: x, startY: y, isSelecting: false, isPanning: false };
+        }
+      });
+      return mutations;
+    } else {
+      return _onMouseDown(evt, targetProps);
+    }
+  },
+
+  _onMouseDown(evt, targetProps) { // eslint-disable-line max-statements
+    evt.preventDefault();
     const {
       dimension, handleWidth, onDomainChange, cachedSelectedDomain, domain
     } = targetProps;
@@ -176,6 +194,15 @@ const Helpers = {
   },
 
   onMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
+    const { isTVSelectable } = targetProps;
+    if (isTVSelectable) {
+      return [];
+    } else {
+      return _onMouseMove(evt, targetProps);
+    }
+  },
+
+  _onMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
     // if a panning or selection has not been started, ignore the event
     if (!targetProps.isPanning && !targetProps.isSelecting) {
       return {};
@@ -228,6 +255,15 @@ const Helpers = {
   },
 
   onMouseUp(evt, targetProps) {
+    const { isTVSelectable } = targetProps;
+    if (isTVSelectable) {
+      return [];
+    } else {
+      return _onMouseUp(evt, targetProps);
+    }
+  },
+
+  _onMouseUp(evt, targetProps) {
     const { x1, y1, x2, y2, onDomainChange, domain } = targetProps;
     // if the mouse hasn't moved since a mouseDown event, select the whole domain region
     if (x1 === x2 || y1 === y2) {
