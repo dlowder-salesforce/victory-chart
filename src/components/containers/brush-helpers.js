@@ -119,7 +119,7 @@ const Helpers = {
       mutations.push({
         target: "parent",
         mutation: () => {
-          return { startX: x, startY: y, isSelecting: false, isPanning: false };
+          return { startX: x, startY: y, tvStartX: x, tvStartY: y, isSelecting: false, isPanning: false };
         }
       });
       return mutations;
@@ -194,9 +194,31 @@ const Helpers = {
   },
 
   onMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
-    const { isTVSelectable } = targetProps;
+    const { isTVSelectable, tvStartX, tvStartY, isPanning, isSelecting, domainBox } = targetProps;
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
     if (isTVSelectable) {
-      return [];
+      if (isPanning) {
+        evt.nativeEvent.locationX = (domainBox.x1 + domainBox.x2)/2 + x - tvStartX;
+        evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
+        return this._onMouseMove(evt, targetProps);
+      } else if (isSelecting) {
+        //evt.deltaY = y - startY;
+        return [];
+      } else {
+        const absDeltaX = Math.abs(x - tvStartX);
+        const absDeltaY = Math.abs(y - tvStartY);
+        const p = absDeltaX > absDeltaY;
+        const s = !p;
+        return [{
+          target: "parent",
+          mutation: () => {
+            return {
+              isPanning: p,
+              isSelecting: s
+            };
+          }
+        }];
+      }
     } else {
       return _onMouseMove(evt, targetProps);
     }
