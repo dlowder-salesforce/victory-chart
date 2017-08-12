@@ -24,6 +24,10 @@ const combineEventHandlers = (eventHandlersArray) => {
     forOwn(localHandlers, (localHandler, eventName) => {
       const existingHandler = finalHandlers[eventName];
       if (existingHandler) {
+        // If we don't do this when using victory-native, onMouse handlers will be called twice
+        if (eventName.indexOf('Touch') !== -1) {
+          return finalHandlers;
+        }
         // create new handler for event that concats the existing handler's mutations with new ones
         finalHandlers[eventName] = function combinedHandler(...params) { // named for debug clarity
           // sometimes handlers return undefined; use empty array instead, for concat()
