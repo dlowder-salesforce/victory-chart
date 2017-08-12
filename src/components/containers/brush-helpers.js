@@ -115,20 +115,25 @@ const Helpers = {
     const { isTVSelectable } = targetProps;
     const { x, y } = Selection.getSVGEventCoordinates(evt);
     if (isTVSelectable) {
-      var mutations = this._onMouseDown(evt, targetProps);
-      mutations.push({
-        target: "parent",
-        mutation: () => {
-          return { startX: x, startY: y, tvStartX: x, tvStartY: y, isSelecting: false, isPanning: false };
-        }
-      });
-      return mutations;
+      return this.onRelativeMouseDown(evt, targetProps);
     } else {
-      return _onMouseDown(evt, targetProps);
+      return this.onAbsoluteMouseDown(evt, targetProps);
     }
   },
 
-  _onMouseDown(evt, targetProps) { // eslint-disable-line max-statements
+  onRelativeMouseDown(evt, targetProps) { // eslint-disable-line max-statements
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    var mutations = this.onAbsoluteMouseDown(evt, targetProps);
+    mutations.push({
+      target: "parent",
+      mutation: () => {
+        return { startX: x, startY: y, relativeStartX: x, relativeStartY: y, isSelecting: false, isPanning: false };
+      }
+    });
+    return mutations;
+  },
+
+  onAbsoluteMouseDown(evt, targetProps) { // eslint-disable-line max-statements
     evt.preventDefault();
     const {
       dimension, handleWidth, onDomainChange, cachedSelectedDomain, domain
@@ -194,37 +199,43 @@ const Helpers = {
   },
 
   onMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
-    const { isTVSelectable, tvStartX, tvStartY, isPanning, isSelecting, domainBox } = targetProps;
-    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    const { isTVSelectable } = targetProps;
     if (isTVSelectable) {
-      if (isPanning) {
-        evt.nativeEvent.locationX = (domainBox.x1 + domainBox.x2)/2 + x - tvStartX;
-        evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
-        return this._onMouseMove(evt, targetProps);
-      } else if (isSelecting) {
-        //evt.deltaY = y - startY;
-        return [];
-      } else {
-        const absDeltaX = Math.abs(x - tvStartX);
-        const absDeltaY = Math.abs(y - tvStartY);
-        const p = absDeltaX > absDeltaY;
-        const s = !p;
-        return [{
-          target: "parent",
-          mutation: () => {
-            return {
-              isPanning: p,
-              isSelecting: s
-            };
-          }
-        }];
-      }
+      return this.onRelativeMouseMove(evt, targetProps);
     } else {
-      return _onMouseMove(evt, targetProps);
+      return this.onAbsoluteMouseMove(evt, targetProps);
     }
   },
 
-  _onMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
+  onRelativeMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    const { isTVSelectable, relativeStartX, relativeStartY, isPanning, isSelecting, domainBox } = targetProps;
+    if (isPanning) {
+      evt.nativeEvent.locationX = (domainBox.x1 + domainBox.x2)/2 + x - relativeStartX;
+      evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
+      return this.onAbsoluteMouseMove(evt, targetProps);
+    } else if (isSelecting) {
+      evt.nativeEvent.locationX = Math.max(domainBox.x1, domainBox.x2) + y - relativeStartY;
+      evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
+      return this.onAbsoluteMouseMove(evt, targetProps);
+    } else {
+      const absDeltaX = Math.abs(x - relativeStartX);
+      const absDeltaY = Math.abs(y - relativeStartY);
+      const p = absDeltaX > absDeltaY;
+      const s = !p;
+      return [{
+        target: "parent",
+        mutation: () => {
+          return {
+            isPanning: p,
+            isSelecting: s
+          };
+        }
+      }];
+    }
+  },
+
+  onAbsoluteMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
     // if a panning or selection has not been started, ignore the event
     if (!targetProps.isPanning && !targetProps.isSelecting) {
       return {};
@@ -279,13 +290,20 @@ const Helpers = {
   onMouseUp(evt, targetProps) {
     const { isTVSelectable } = targetProps;
     if (isTVSelectable) {
-      return [];
+      return this.onRelativeMouseUp(evt, targetProps);
     } else {
-      return _onMouseUp(evt, targetProps);
+      return this.onAbsoluteMouseUp(evt, targetProps);
     }
   },
 
-  _onMouseUp(evt, targetProps) {
+  onRelativeMouseUp(evt, targetProps) {
+    return [{
+      target: "parent",
+      mutation: () => ({ isPanning: false, isScaling: false })
+    }];
+  }, 
+
+  onAbsoluteMouseUp(evt, targetProps) {
     const { x1, y1, x2, y2, onDomainChange, domain } = targetProps;
     // if the mouse hasn't moved since a mouseDown event, select the whole domain region
     if (x1 === x2 || y1 === y2) {
@@ -300,7 +318,7 @@ const Helpers = {
     }
     return [{
       target: "parent",
-      mutation: () => ({ isPanning: false, isSelecting: false })
+      mutation: () => ({ isPanning: false })
     }];
   },
 
