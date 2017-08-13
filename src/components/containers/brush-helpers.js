@@ -127,7 +127,9 @@ const Helpers = {
     mutations.push({
       target: "parent",
       mutation: () => {
-        return { startX: x, startY: y, relativeStartX: x, relativeStartY: y, isSelecting: false, isPanning: false };
+        return { 
+          relativeStartX: x, relativeStartY: y
+        };
       }
     });
     return mutations;
@@ -209,30 +211,35 @@ const Helpers = {
 
   onRelativeMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
     const { x, y } = Selection.getSVGEventCoordinates(evt);
-    const { isTVSelectable, relativeStartX, relativeStartY, isPanning, isSelecting, domainBox } = targetProps;
-    if (isPanning) {
-      evt.nativeEvent.locationX = (domainBox.x1 + domainBox.x2)/2 + x - relativeStartX;
-      evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
-      return this.onAbsoluteMouseMove(evt, targetProps);
-    } else if (isSelecting) {
-      evt.nativeEvent.locationX = Math.max(domainBox.x1, domainBox.x2) + y - relativeStartY;
-      evt.nativeEvent.locationY = (domainBox.y1 + domainBox.y2)/2;
-      return this.onAbsoluteMouseMove(evt, targetProps);
-    } else {
-      const absDeltaX = Math.abs(x - relativeStartX);
-      const absDeltaY = Math.abs(y - relativeStartY);
-      const p = absDeltaX > absDeltaY;
-      const s = !p;
-      return [{
-        target: "parent",
-        mutation: () => {
-          return {
-            isPanning: p,
-            isSelecting: s
-          };
-        }
-      }];
-    }
+    const { isTVSelectable, relativeStartX, relativeStartY, scale, polar, domainBox, fullDomainBox, onDomainChange } = targetProps;
+    const deltaX = x - relativeStartX;
+    const deltaY = relativeStartY - y;
+    const mutatedDomainBox = {
+      x1: domainBox.x1 + deltaX + deltaY,
+      x2: domainBox.x2 + deltaX - deltaY,
+      y1: domainBox.y1,
+      y2: domainBox.y2
+    };
+    var constrainedDomainBox = this.constrainBox(mutatedDomainBox, fullDomainBox);
+    constrainedDomainBox.polar = polar;
+    constrainedDomainBox.scale = scale;
+
+    const currentDomain = Selection.getBounds(constrainedDomainBox);
+    if (isFunction(onDomainChange)) {
+      onDomainChange(currentDomain);
+    };
+    return [{
+      target: "parent",
+      mutation: () => {
+        return {
+          currentDomain,
+          x1: constrainedDomainBox.x1,
+          x2: constrainedDomainBox.x2,
+          y1: constrainedDomainBox.y1,
+          y2: constrainedDomainBox.y2
+        };
+      }
+    }];
   },
 
   onAbsoluteMouseMove(evt, targetProps) { // eslint-disable-line max-statements, complexity
