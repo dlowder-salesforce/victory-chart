@@ -165,24 +165,27 @@ const Helpers = {
   onMouseDown(evt, targetProps) {
     evt.preventDefault();
     const { isTVSelectable } = targetProps;
-    const { x, y } = Selection.getSVGEventCoordinates(evt);
     if (isTVSelectable ) {
-      return [{
-        target: "parent",
-        mutation: () => {
-          return {
-            startX: x, startY: y, panning: false, scaling: false,
-            parentControlledProps: ["domain"]
-          };
-        }
-      }];
+      return this.onRelativeMouseDown(evt, targetProps);
     } else {
-      return _onMouseDown(evt, targetProps);
+      return this.onAbsoluteMouseDown(evt, targetProps);
     }
   },
 
-  _onMouseDown(evt, targetProps) {
-    evt.preventDefault();
+  onRelativeMouseDown(evt, targetProps) {
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    return [{
+      target: "parent",
+      mutation: () => {
+        return {
+          startX: x, startY: y, panning: false, scaling: false,
+          parentControlledProps: ["domain"]
+        };
+      }
+    }];
+  },
+
+  onAbsoluteMouseDown(evt, targetProps) {
     const { x, y } = Selection.getSVGEventCoordinates(evt);
     return [{
       target: "parent",
@@ -213,36 +216,41 @@ const Helpers = {
     }];
   },
 
-  onMouseMove(evt, targetProps, eventKey, ctx, keepStart) { // eslint-disable-line max-params
-    const { isTVSelectable, scaling, panning, startX, startY } = targetProps;
-    const { x, y } = Selection.getSVGEventCoordinates(evt);
+  onMouseMove(evt, targetProps, eventKey, ctx) { // eslint-disable-line max-params
+    const { isTVSelectable } = targetProps;
     if (isTVSelectable) {
-      if (panning) {
-        return this._onMouseMove(evt, targetProps, eventKey, ctx, true);
-      } else if (scaling) {
-        evt.deltaY = y - startY;
-        return this.onWheel(evt, targetProps, eventKey, ctx);
-      } else {
-        const absDeltaX = Math.abs(x - startX);
-        const absDeltaY = Math.abs(y - startY);
-        const p = absDeltaX > absDeltaY;
-        const s = !p;
-        return [{
-          target: "parent",
-          mutation: () => {
-            return {
-              panning: p,
-              scaling: s
-            };
-          }
-        }];
-      }
+      return this.onRelativeMouseMove(evt, targetProps, eventKey, ctx);
     } else {
-      _onMouseMove(evt, targetProps, eventKey, ctx);
+      return this.onAbsoluteMouseMove(evt, targetProps, eventKey, ctx);
     }
   },
 
-  _onMouseMove(evt, targetProps, eventKey, ctx, keepStart) { // eslint-disable-line max-params
+  onRelativeMouseMove(evt, targetProps, eventKey, ctx) { // eslint-disable-line max-params
+    const { scaling, panning, startX, startY } = targetProps;
+    const { x, y } = Selection.getSVGEventCoordinates(evt);
+    if (panning) {
+      return this.onAbsoluteMouseMove(evt, targetProps, eventKey, ctx, true);
+    } else if (scaling) {
+      evt.deltaY = y - startY;
+      return this.onWheel(evt, targetProps, eventKey, ctx);
+    } else {
+      const absDeltaX = Math.abs(x - startX);
+      const absDeltaY = Math.abs(y - startY);
+      const p = absDeltaX > absDeltaY;
+      const s = !p;
+      return [{
+        target: "parent",
+        mutation: () => {
+          return {
+            panning: p,
+            scaling: s
+          };
+        }
+      }];
+    }
+  },
+
+  onAbsoluteMouseMove(evt, targetProps, eventKey, ctx, keepStart) { // eslint-disable-line max-params
     if (targetProps.panning) {
       const { scale, startX, startY, onDomainChange, dimension, zoomDomain } = targetProps;
       const { x, y } = Selection.getSVGEventCoordinates(evt);
